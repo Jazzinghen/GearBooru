@@ -3,6 +3,7 @@
 require 'rubygems'
 require 'open-uri'
 require 'hpricot'
+require 'ftools'
 
 @user_agent = "Mozilla/5.0"
 
@@ -43,7 +44,11 @@ def gel_search_res(url)
     #Rdoc: http://code.whytheluckystiff.net/hpricot/
     doc = Hpricot(response)
 
-    str = (doc/"a[@alt='last page']").first.get_attribute("href")
+    last_page = (doc/"a[@alt='last page']").first
+    
+    return 0 if last_page == nil
+    
+    str = last_page.get_attribute("href")
     
     return str.split("=").last.to_i
 end
@@ -63,9 +68,11 @@ def gel_fullsize_links(url)
     #Rdoc: http://code.whytheluckystiff.net/hpricot/
     doc = Hpricot(response)
 
-    image = doc.search('a[text()="Original image"]').first.get_attribute("href")
+    image_data = doc.search('a[text()="Original image"] | li[text()*="Rating"]')
     
-    rating = (doc/'//*[@id="stats"]').search('li[text()*="Rating"]').inner_text.split(' ').last
+    image = image_data[0].get_attribute("href")
+    
+    puts rating = image_data[1].inner_text.split(' ').last
     
     return [image,rating]    
 end
@@ -73,9 +80,13 @@ end
 def gel_img_download(url, imgFold)
     imgName = url.split("/").last
     
-    newImage = open(imgFold + imgName, "wb")
+    return if File.file?(imgFold + imgName)
+    
+    newImage = open(imgName + ".gear", "wb") 
     newImage.write(open(url).read)
-    newImage.close    
+    newImage.close
+    
+    File.move(imgName + ".gear", imgFold + imgName)
 end
 
 def gen_folders(folder)
@@ -88,7 +99,7 @@ def gen_folders(folder)
 end
 
 def main()
-    searchTerms = "agarest_senki"
+    searchTerms = "souku_choshin"#"agarest_senki"
     gelbooru_root   = "http://www.gelbooru.com/"
     gelbooru_search = "index.php?page=post&s=list&tags="
     folder = searchTerms + "/"
@@ -119,5 +130,7 @@ def main()
 end
 
 main
+
+#puts gel_fullsize_links("http://www.gelbooru.com/index.php?page=post&s=view&id=848644")
 
 #scarica(gelbooru)
